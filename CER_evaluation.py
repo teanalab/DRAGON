@@ -74,7 +74,7 @@ def evaluate_model(model, test_loader, loss_fn):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--modelpath', default='/home/hi9115/GCN-IR/Rank_candidate_project_Option1/data/reduced_candid_neighbors/models/fine_tune_epoch2_lambda05_maxlen5120.pt', help="Path to the trained model.")
+    parser.add_argument('--modelpath', help="Path to the trained model.")
     # Define device and load the tokenizer
     tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -90,8 +90,8 @@ if __name__ == '__main__':
 
     # Load the test dataset
     test_dataset = SubgraphPruningDataset(
-        '/home/hi9115/GCN-IR/Rank_candidate_project_Option1/data/reduced_candid_neighbors/relevance_test.tsv',
-        '/home/hi9115/GCN-IR/Rank_candidate_project_Option1/data/entities.json',
+        'Path to your test TSV file',
+        'Path to your entities JSON file',
         tokenizer, device
     )
 

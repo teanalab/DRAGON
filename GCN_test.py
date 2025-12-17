@@ -25,11 +25,9 @@ def read_json(json_file):
     return data
 
 def create_graphs_from_scores(score_file):
-    # with open(score_file, 'r') as f:
-    #     scores_data = json.load(f)
+    
     with open(score_file, 'r') as f:
-        # read = f.read()
-        # data = json_stream.load(f)
+       
         data = json_stream.load(f, persistent=True)
         standard_data = json_stream.to_standard_types(data)
 
@@ -113,14 +111,7 @@ def prune_and_rank_candidates(model, dataloader, graph_data, device, top_k):
                 g_neg_feature = []
             else:
                 g_neg_feature = [g_neg[i].ndata['feat'] for i in range(len(g_neg))]
-            # optimizer.zero_grad()
-            # losses = []
-            # loss = 0
-            # g_pos = [graph_data[q][p] for q, p in zip(qid, pos) if not p == 'nan']
-            # g_pos_feature = [g_pos[i].ndata['feat'] for i in range(len(g_pos))]
-            # g_neg = [graph_data[q][n] for q, n in zip(qid, neg) if not n == 'nan']
-            # g_neg_feature = [g_neg[i].ndata['feat'] for i in range(len(g_neg))]
-
+            
 
 
             with torch.no_grad():
@@ -131,12 +122,7 @@ def prune_and_rank_candidates(model, dataloader, graph_data, device, top_k):
                     gn, gnf = gn.to(device), gnf.to(device)
                     neg_scores = model(gn, gnf).mean(dim=0)
                     candid_scores_list.append((neg_name, neg_scores, 0))
-                # for gp, gn, gpf, gnf in zip(g_pos, g_neg, g_pos_feature, g_neg_feature):
-                #     gp, gn, gpf, gnf = gp.to(device), gn.to(device), gpf.to(device), gnf.to(device)
-                #     pos_scores = model(gp, gpf).mean(dim=0)
-                #     neg_scores = model(gn, gnf).mean(dim=0)
-                # score = model(input_ids, attention_mask, token_type_ids, Enc_Q, Enc_C, relevance)
-
+                
 
 
             # Store the candidate and its score
@@ -147,19 +133,14 @@ def prune_and_rank_candidates(model, dataloader, graph_data, device, top_k):
 
             question_candidates[qid].append(candid_scores_list)
 
-            # if idx > 2:
-            #     break
-            # print(f'question_id is :{question_id} and question_candidates[question_id] is: {question_candidates[question_id]}\n')
+            
         # Rank and prune the candidates for each question
     pruned_candidates = {}
-    #TODO: save question_candidates in CSV file
 
-    # for question_id, candidates in question_candidates.items():
-    #     score_list = [score for score in candidates[0]]
-    #     # File path to save the CSV
+    
     output_file = 'scores.csv'
 
-        # Open the CSV file for writing
+    # Open the CSV file for writing
     with open(output_file, mode='w', newline='') as file:
         writer = csv.writer(file)
 
@@ -182,13 +163,7 @@ def prune_and_rank_candidates(model, dataloader, graph_data, device, top_k):
         # Sort candidates based on the pruning score (descending order)
         candidates = sorted(score_list, key=lambda x: x[1].item(), reverse=True)
 
-        # Select the top_k candidates
-        # top_candidates = [candidate for candidate, score, relevance in candidates[:top_k]]
-        #
-        # Save the top candidates in the dictionary
-        # pruned_candidates[question_id] = top_candidates
-
-        # Select the top_k candidates
+        
         top_candidates_metrics = [(candidate, score.item(), relevance) for candidate, score, relevance in candidates[:top_k]]
 
         # Save the top candidates in the dictionary
@@ -295,17 +270,11 @@ if __name__ == '__main__':
 
     parser.add_argument('--gpu', type=int, default=0, help="GPU device ID. Use -1 for CPU")
     parser.add_argument('--model_path', type=str,  help="Path to the saved model",
-                        default= "/home/hi9115/GCN-IR/Rank_candidate_project_Option1/GCN-model/GCN-model/types-models/weighted-jaccard/train_model_loss_0.2055_epoch_20.pt")
-    # parser.add_argument('--dataset_tsv', type=str,  help="Path to the TSV file with candidates",
-    #                     default= "/home/hi9115/GCN-IR/Rank_candidate_project_Option1/data/reduced_candid_neighbors/relevance_train.tsv")
-    # parser.add_argument('--score_file_dir',
-    #                     default='/data/hi9115/Scores-Colbert/',
-    #                     help="Directory containing score files")
+                        )
+    
     parser.add_argument('--score_file_dir',
-                        default='/home/hi9115/GCN-IR/Rank_candidate_project_Option1/data/Scores-weighted-jaccard-types/',
                         help="Directory containing score files")
     parser.add_argument('--triple_file_dir',
-                        default='/home/hi9115/GCN-IR/Rank_candidate_project_Option1/GCN-model/GCN-model/triples/',
                         help="Directory containing triple files")
 
     parser.add_argument('--top_k', type=int, help="number of candidates for pruning",
@@ -344,10 +313,7 @@ if __name__ == '__main__':
     triples_file = os.path.join(triple_file_dir, f'dict_{split}.json')
     triples = read_triples(triples_file)
 
-    # Create a dataset and dataloader
-    # dataset = QADataset(triples)
-    # dataloader = DataLoader(dataset, batch_size=32, shuffle=True)
-    # dataloader = DataLoader(dataset, batch_size=1, shuffle=True)
+   
 
     top_k = args.top_k
 
@@ -358,7 +324,7 @@ if __name__ == '__main__':
     # Prune and rank candidates for each question
 
     pruned_candidates_metrics = prune_and_rank_candidates(model, triples, graph_data, device, top_k=top_k)
-    output_file2 ='/home/hi9115/GCN-IR/Rank_candidate_project_Option1/GCN-model/GCN-model/sorted.csv'
+    output_file2 ='pruned_candidates_metrics.csv'
     with open(output_file2, mode='w', newline='') as file:
         writer = csv.writer(file)
 
@@ -378,7 +344,4 @@ if __name__ == '__main__':
     print(f"MAP: {metrics['MAP']:.4f}, Hit@1: {metrics['Hit@1']:.4f}, Hit@10: {metrics['Hit@10']:.4f}, Hit@100: {metrics['Hit@100']:.4f}")
     mrr_pure, mrr_divide_num_q = calculate_mrr(pruned_candidates_metrics, top_k)
     print(f"MRR is: {mrr_pure}, mrr_divide_num_q:{mrr_divide_num_q}")
-    # Save the pruned candidates to a JSON file
-    # save_pruned_candidates(pruned_candidates, args.output_file)
-
-    # print(f"Pruned candidates saved to {args.output_file}")
+    

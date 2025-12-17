@@ -247,22 +247,7 @@ def prune_and_rank_candidates(model, dataloader, graph_data, device, top_k):
             top_candidates_metrics = [(candidate, score.item(), relevance) for candidate, score, relevance in
                                       candidates]
             question_candidates[qid].append(top_candidates_metrics)
-    # output_file = 'scores.csv'
-    #     # Open the CSV file for writing
-    # with open(output_file, mode='w', newline='') as file:
-    #     writer = csv.writer(file)
-    #
-    #     # Write header
-    #     writer.writerow(['question_id', 'candidate', 'score'])
-    #
-    #     # Iterate through each question_id and its candidates
-    #     for question_id, candidates in question_candidates.items():
-    #         # Generate the score_list as (candidate, score) for each candidate
-    #         score_list = [score for score in candidates[0]]
-    #         # Write each (candidate, score) pair along with the question_id to the CSV
-    #         for candidate, score, _ in score_list:
-    #             writer.writerow([question_id, candidate, score.item()])
-
+    
     return question_candidates, total_loss_test, iteration
 
 
@@ -356,7 +341,7 @@ def merge_json_files(file1, file2):
 
     # Merge the dictionaries
     merged_data = {**data1, **data2}  # Combines data1 and data2, data2 overwrites keys in data1 if duplicates exist
-    with open("/home/hi9115/GCN-IR/Rank_candidate_project_Option1/GCN-model/GCN-model/mergedict.json", 'w') as f_out:
+    with open("Path to the merged dictionary file", 'w') as f_out:
         json.dump(merged_data, f_out, indent=4)
     return merged_data
 
@@ -415,9 +400,6 @@ def listnet_loss_with_penalty(pos_scores, neg_scores):
     mae = l1_loss_fn(predicted_distribution, true_distribution)
     ce = nn.CrossEntropyLoss()
     ce_loss = ce(all_scores, relevance.float())
-    # Apply rank penalty to the KL-divergence loss
-    # weighted_loss = kl_loss * (1 + rank_penalty) + mae  # Higher weight for farther ranks
-    # weighted_loss = kl_loss * rank_penalty + (0.5 * ce_loss)  # Higher weight for farther ranks
     kl_loss = kl_loss * rank_penalty
 
     return kl_loss
@@ -437,26 +419,16 @@ def listnet_loss(pos_scores, neg_scores):
     # Ensure pos_scores is a 2D tensor
     pos_scores = pos_scores.unsqueeze(0) if pos_scores.dim() == 1 else pos_scores
 
-    # Combine positive and negative scores into a single tensor
     all_scores = torch.cat((pos_scores.view(-1,1), neg_scores.view(-1,1)), dim=0)  # Concatenate along rows
 
-    # all_scores = torch.cat((pos_scores.unsqueeze(0), neg_scores.unsqueeze(0)), 1)
-
-    # Create ground-truth relevance distribution
-    # Positive candidate is relevant, negatives are not
     relevance = torch.zeros_like(all_scores, requires_grad=False).to(device)
     relevance[0] = 1.  # Only the positive sample is relevant
 
     # Apply softmax to get distributions
     predicted_distribution = F.log_softmax(all_scores, dim=0)
-    # predicted_distribution = F.softmax(all_scores, dim=0)
-    # one_hot_predicted = torch.zeros_like(predicted_distribution, requires_grad=True).\
-    #     to(predicted_distribution.device)
-    # predicted_distribution = one_hot_predicted[torch.argmax(predicted_distribution)]
 
     true_distribution = F.softmax(relevance.float(), dim=0)
 
-    ######TODO: MONA
     sorted_indices = torch.argsort(all_scores.squeeze(), descending=True)
     golden_rank = (sorted_indices == 0).nonzero(as_tuple=True)[0].item() + 1  # +1 for 1-based rank
     # Weight using MAE: Higher penalty for farther ranks
@@ -465,8 +437,6 @@ def listnet_loss(pos_scores, neg_scores):
 
     # Compute KL-divergence between the true and predicted distributions
     loss = F.kl_div(predicted_distribution, true_distribution)
-
-    # bce = F.binary_cross_entropy_with_logits(all_scores, relevance)
 
     bce = F.binary_cross_entropy(all_scores, relevance.float())
     weighted_bce = bce * rank_penalty
@@ -489,19 +459,14 @@ def eval_model(model,triples_test, graph_data, device, top_k=100 ):
 
         # Iterate through each question_id and its candidates
         for question_id, candidates in pruned_candidates_metrics.items():
-            # Generate the score_list as (candidate, score) for each candidate
-            # score_list = [score for score in candidates[0]]
-            # # Write each (candidate, score) pair along with the question_id to the CSV
-            # for candidate, score in score_list:
-            # print(candidates.__sizeof__())
+            
             for candidate, score, relevance in candidates[0]:
                 writer.writerow([question_id, candidate, score, relevance])
 
     metrics = calculate_metrics(pruned_candidates_metrics, top_k=top_k)
     print(
         f"MAP: {metrics['MAP']:.4f}, Hit@1: {metrics['Hit@1']:.4f}, Hit@10: {metrics['Hit@10']:.4f}, Hit@100: {metrics['Hit@100']:.4f}, MRR@100: {metrics['MRR@100']:.4f}, Recall@1: {metrics['Recall@1']:.4f}, Recall@10: {metrics['Recall@10']:.4f}")
-    # mrr_pure, mrr_divide_num_q = calculate_mrr(pruned_candidates_metrics, top_k)
-    # print(f"MRR is: {mrr_pure}, mrr_divide_num_q:{mrr_divide_num_q}")
+    
     return total_loss_test, num_questions
 
 
@@ -675,28 +640,18 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--split', default='train', choices=['train', 'dev', 'test'])
     parser.add_argument('--gpu', type=int, default= 0, help="GPU device ID. Use -1 for CPU training")
-    # parser.add_argument('--score_file_dir',
-    #                     default='/data/hi9115/Scores-weighted-jaccard-types-kewer-without-prune',
-    #                     help="Directory containing score files")
+    
     parser.add_argument('--score_file_dir',
-                        default='/data/hi9115/Scores-weighted-jaccard-types-kewer',
                         help="Directory containing score files")
     parser.add_argument('--triple_file_dir',
-                        default='/home/hi9115/GCN-IR/Rank_candidate_project_Option1/GCN-model/GCN-model/triples/',
                         help="Directory containing triple files")
-    # parser.add_argument('--triple_file_dir',
-    #                     default='/home/hi9115/GCN-IR/Rank_candidate_project_Option1/GCN-model/GCN-model/triples-without-prune/',
-    #                     help="Directory containing triple files")
-    parser.add_argument('--model_path', type = str, default="/data/hi9115/models/mulhidden/hidd24/train_model",
+    parser.add_argument('--model_path', type = str,
                          help="Path to save the model")
-    parser.add_argument('--experiments_path', type = str, default="/data/hi9115/models/mulhidden/hidd24/",
+    parser.add_argument('--experiments_path', type = str,
                         help="Path to save reports")
-    # parser.add_argument('--resume_from', type=str, default="/data/hi9115/models/types-model/weighted-jaccard-types-kewer/train_model_loss_0.4717_epoch_73.pt")
+
     parser.add_argument('--resume_from', type=str, help="Path to resume from")
-    # parser.add_argument('--resume_from', type=str, default="/data/hi9115/models/types-model/weighted-jaccard-types-kewer/train_model_loss_0.4717_epoch_73.pt")
 
-
-    # parser.add_argument('--resume_from', type=str, default="/data/hi9115/models/types-model/weighted-jaccard-modifymodel_hist/train_model_loss_0.4804_epoch_24.pt")
 
     args = parser.parse_args()
     print(args)
@@ -706,8 +661,6 @@ if __name__ == '__main__':
     else:
         device = torch.device('cpu')
 
-    # question_neighbors = utils.load_prune_candid()
-    # neighbor_triples = utils.load_neighbor_triples_new()
 
     # Hyperparameters
     in_feats = 12
