@@ -6,6 +6,34 @@
 
 Neural ranking architecture for conversational entity retrieval from knowledge graphs. DRAGON aggregates fine-grained relevance signals using Graph Convolutional Networks and multi-head attention.
 
+Model Configuration & Training Details
+
+The following hyperparameters and architectural settings were used in all experiments reported in the paper:
+
+Sub-graph Pruning
+
+The pruning threshold λ for candidate entity sub-graph pruning was set to 0.5.
+
+The coefficient λ′ in the feature weighting function was set to 3 × 10⁻⁴.
+
+Optimization
+
+All neural architectures were optimized using the AdamW optimizer.
+
+Learning rate: 2.5 × 10⁻⁵
+
+DRAGON Architecture
+
+Hidden dimension of all convolutional layers: 32
+
+Number of attention layers: 8
+
+Number of GCN layers: 2
+
+Number of fully connected layers: 6
+
+The aggregated relevance vector for each candidate response entity is passed through six fully connected layers to produce the final ranking score.
+
 ---
 
 ## Quick Start
